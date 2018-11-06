@@ -22,7 +22,7 @@ ARUCO_DICT = aruco.Dictionary_get(aruco.DICT_ARUCO_ORIGINAL)
 # Y - väiksem number üleval pool, väiksem allpool, keskpunktiks on ekraani alumine serv
 # Z - väiksem number lähemal, suurem number kaugemal, nullpunktiks on kaamera lääts
 
-with open("calibration/calibration-live.yml", 'r') as stream:
+with open("calibration-laptop.yml", 'r') as stream:
     try:
         calibration = yaml.load(stream)
         cam = numpy.array(calibration['camera_matrix']['data'])
@@ -38,7 +38,7 @@ with open("calibration/calibration-live.yml", 'r') as stream:
             grayscale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
             corners, ids, rejectedImgPoints = aruco.detectMarkers(grayscale, ARUCO_DICT, parameters=ARUCO_PARAMETERS)
-            rvec, tvec, _objPoints = aruco.estimatePoseSingleMarkers(corners, MARKER_SIZE_REAL_FIELD, cam, dc)
+            rvec, tvec, _objPoints = aruco.estimatePoseSingleMarkers(corners, MARKER_SIZE_CALCULATOR, cam, dc)
 
             # img = aruco.drawDetectedMarkers(img, corners, ids, borderColor=(0, 255, 0))
             # retval, rvec, tvec = cv2.solvePnP(corners)
