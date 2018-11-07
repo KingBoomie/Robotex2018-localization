@@ -1,6 +1,7 @@
 import numpy
 import yaml
 import cv2
+import map
 
 
 class Localizer:
@@ -10,14 +11,14 @@ class Localizer:
     MARKER_SIZE_CALCULATOR = 0.0555
     MARKER_SIZE_REAL_FIELD = 0.16
 
-    MARKER_SIZE = MARKER_SIZE_CALCULATOR
+    MARKER_SIZE = MARKER_SIZE_REAL_FIELD
 
     marker_ids_to_detect = [11, 12, 21, 22]
     markerdata = {
-        11: {"loc_x": -2.3, "loc_y": +0.23, "angle": 0},
-        12: {"loc_x": -2.3, "loc_y": -0.23, "angle": 0},
-        21: {"loc_x": +2.3, "loc_y": +0.23, "angle": 180},
-        22: {"loc_x": +2.3, "loc_y": -0.23, "angle": 180}
+        11: {"loc_x": -2.3, "loc_y": -0.23, "angle": numpy.pi},
+        12: {"loc_x": -2.3, "loc_y": +0.23, "angle": numpy.pi},
+        21: {"loc_x": +2.3, "loc_y": +0.23, "angle": 0},
+        22: {"loc_x": +2.3, "loc_y": -0.23, "angle": 0}
     }
 
     def __init__(self, camera_parameters_file_location):
@@ -36,7 +37,8 @@ class Localizer:
 
     def estimateLocation(self, frame, draw_axis_to_frame=False):
         # Initialize the output variables
-        out_position_two_markers = None
+        out_position_two_markers_1x = None
+        out_position_two_markers_2x = None
         out_position_11 = None
         out_position_12 = None
         out_position_21 = None
@@ -61,6 +63,7 @@ class Localizer:
                     if draw_axis_to_frame:
                         frame = cv2.aruco.drawAxis(frame, self.camera_matrix,
                                                    self.distortion_coefficients, rvec[i], tvec[i], 0.1)
+                        frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
 
                     # Read in some metadata about the detected marker
                     marker_id = int(ids[i])
@@ -88,26 +91,90 @@ class Localizer:
 
                     # Combine the markers location angle and orientation angle to get the real angle
                     angle += marker_angle_from_camera
+                    angle += markerdata['angle']
 
                     # Knowing the angle and distance, calculate the location of the camera
                     robot_x = marker_absolute_position[0] - marker_distance_from_camera * numpy.cos(angle)
                     robot_y = marker_absolute_position[1] + marker_distance_from_camera * numpy.sin(angle)
 
-                    out_position_22 = robot_x, robot_y
+                    if marker_id == 11:
+                        out_position_11 = robot_x, robot_y
+                    if marker_id == 12:
+                        out_position_12 = robot_x, robot_y
+                    if marker_id == 21:
+                        out_position_21 = robot_x, robot_y
+                    if marker_id == 22:
+                        out_position_22 = robot_x, robot_y
+
             if len(detected_markers_with_corrent_ids) == 2:
-                print("Multiple markers detected - I can do better")
+                dist = [
+                    numpy.sqrt(tvec[0][0][0] ** 2 + tvec[0][0][2] ** 2),
+                    numpy.sqrt(tvec[1][0][0] ** 2 + tvec[1][0][2] ** 2)
+                ]
+
+                if ids[0] == 11 or ids[0] == 12:
+                    dist11 = -1
+                    dist12 = -1
+                    if ids[0] == 11 and ids[1] == 12:
+                        dist11 = dist[0]
+                        dist12 = dist[1]
+                    elif ids[0] == 12 and ids[1] == 11:
+                        dist12 = dist[0]
+                        dist11 = dist[1]
+
+                    if dist11 != -1 and dist12 != -1:
+
+                        # dist between the markers is 0.46 meters
+                        dist_between_markers = 0.46
+
+                        # Apply the law of cosines
+                        cos_b = (dist_between_markers**2 + dist12**2 - dist11**2)/(2*dist12*dist_between_markers)
+                        angle = numpy.arccos(cos_b)
+
+                        out_x = self.markerdata[12]['loc_x'] + numpy.sin(angle) * dist12
+                        out_y = self.markerdata[12]['loc_y'] - numpy.cos(angle) * dist12
+                        out_position_two_markers_1x = out_x, out_y
+
+                if ids[0] == 21 or ids[0] == 22:
+                    dist21 = -1
+                    dist22 = -1
+                    if ids[0] == 21 and ids[1] == 22:
+                        dist21 = dist[0]
+                        dist22 = dist[1]
+                    elif ids[0] == 22 and ids[1] == 21:
+                        dist22 = dist[0]
+                        dist21 = dist[1]
+
+                    if dist21 != -1 and dist22 != -1:
+                        # dist between the markers is 0.46 meters
+                        dist_between_markers = 0.46
+
+                        # Apply the law of cosines
+                        cos_b = (dist_between_markers ** 2 + dist22 ** 2 - dist21 ** 2) / (
+                                    2 * dist22 * dist_between_markers)
+                        angle = numpy.arccos(cos_b)
+
+                        out_x = self.markerdata[22]['loc_x'] + numpy.sin(angle) * dist22
+                        out_y = self.markerdata[22]['loc_y'] - numpy.cos(angle) * dist22
+                        out_position_two_markers_2x = out_x, out_y
+
             elif len(detected_markers_with_corrent_ids) > 2:
                 print("Too many markers found!")
 
-        if out_position_two_markers is not None:
-            return out_position_two_markers
+        out_map = map.BasketballFieldMap(None, out_position_11, out_position_12, out_position_21, out_position_22,
+                                         out_position_two_markers_1x, out_position_two_markers_2x)
+
+        if out_position_two_markers_1x is not None:
+            out_map.robot_position = out_position_two_markers_1x
         elif out_position_11 is not None:
-            return out_position_11
+            out_map.robot_position = out_position_11
         elif out_position_12 is not None:
-            return out_position_12
+            out_map.robot_position = out_position_12
         elif out_position_21 is not None:
-            return out_position_21
+            out_map.robot_position = out_position_21
         elif out_position_22 is not None:
-            return out_position_22
+            out_map.robot_position = out_position_22
         else:
-            return None, None
+            out_map.robot_position = (None, None)
+
+        return out_map
