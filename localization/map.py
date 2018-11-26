@@ -51,6 +51,9 @@ class BasketballFieldMap:
         else:
             self.robot_position_m2 = robot_position_m2
 
+        self.angle_to_pink = None
+        self.angle_to_blue = None
+        self.robot_angle = None
         pass
 
     def setRobotPosition(self, new_position):
@@ -133,6 +136,13 @@ class BasketballFieldMap:
             robot_location = self.convertRealCoordsToFieldImg(self.robot_position)
             if not any(map(lambda x: x is None, robot_location)):
                 cv2.circle(field_background, robot_location, 5, (50, 255, 50), 3)
+
+                if self.robot_angle is not None:
+                    length = 50
+                    angle = self.robot_angle * -1
+                    x2 = round(robot_location[0] + length * math.cos(angle))
+                    y2 = round(robot_location[1] + length * math.sin(angle))
+                    cv2.line(field_background, robot_location, (x2, y2), (155,155,0), 3)
 
         return field_background
 

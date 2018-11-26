@@ -43,6 +43,8 @@ class Localizer:
         out_position_12 = None
         out_position_21 = None
         out_position_22 = None
+        angle_to_blue = None
+        angle_to_pink = None
 
         # Convert the frame to grayscale so that ArUco detection would work
         grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -59,7 +61,6 @@ class Localizer:
             for i in range(len(rvec)):
                 if ids[i] in self.marker_ids_to_detect:
                     detected_markers_with_corrent_ids.append(tvec)
-
                     if draw_axis_to_frame:
                         frame = cv2.aruco.drawAxis(frame, self.camera_matrix,
                                                    self.distortion_coefficients, rvec[i], tvec[i], 0.1)
@@ -73,6 +74,7 @@ class Localizer:
                     # Calculate the marker's distance and angle from camera (position)
                     marker_distance_from_camera = numpy.sqrt(tvec[i][0][0] ** 2 + tvec[i][0][2] ** 2)
                     marker_angle_from_camera = numpy.tan(tvec[i][0][0] / tvec[i][0][2])
+                    #print(marker_angle_from_camera*180/3.14159265358979323)
 
                     # Calculate the marker's attitude/orientation (rotation)
                     rotM = numpy.zeros(shape=(3, 3))
@@ -88,6 +90,17 @@ class Localizer:
                         angle = -angle_between_marker_normal_and_camera
                     else:
                         angle = angle_between_marker_normal_and_camera
+
+                    # Do some orientation measurements and saving first
+                    angle_to_basket = markerdata['angle'] - angle # angle_between_marker_normal_and_camera
+                    if markerdata['angle'] == 0:
+                        # This is the blue basket
+                        angle_to_blue = angle_to_basket
+                    else:
+                        # This is the pink basket
+                        angle_to_pink = angle_to_basket
+
+                    print(angle_to_basket * 180 / 3.14159265358979323)
 
                     # Combine the markers location angle and orientation angle to get the real angle
                     angle += marker_angle_from_camera
@@ -111,6 +124,7 @@ class Localizer:
                     numpy.sqrt(tvec[0][0][0] ** 2 + tvec[0][0][2] ** 2),
                     numpy.sqrt(tvec[1][0][0] ** 2 + tvec[1][0][2] ** 2)
                 ]
+                print(dist)
 
                 if ids[0] == 11 or ids[0] == 12:
                     dist11 = -1
@@ -164,9 +178,19 @@ class Localizer:
         out_map = map.BasketballFieldMap(None, out_position_11, out_position_12, out_position_21, out_position_22,
                                          out_position_two_markers_1x, out_position_two_markers_2x)
 
-        if out_position_two_markers_1x is not None:
-            out_map.robot_position = out_position_two_markers_1x
-        elif out_position_11 is not None:
+        out_map.angle_to_pink = angle_to_pink
+        out_map.angle_to_blue = angle_to_blue
+
+        if angle_to_pink is not None or angle_to_blue is not None:
+            if angle_to_pink is not None:
+                out_map.robot_angle = angle_to_pink
+            else:
+                out_map.robot_angle = angle_to_blue
+
+        #if out_position_two_markers_1x is not None:
+        #    out_map.robot_position = out_position_two_markers_1x
+        #el
+        if out_position_11 is not None:
             out_map.robot_position = out_position_11
         elif out_position_12 is not None:
             out_map.robot_position = out_position_12
