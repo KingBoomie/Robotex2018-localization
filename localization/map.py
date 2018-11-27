@@ -148,6 +148,13 @@ class BasketballFieldMap:
                     y2 = round(robot_location[1] + length * math.sin(angle))
                     cv2.line(field_background, robot_location, (x2, y2), (155,155,0), 3)
 
+        if self.relative_angle_to_pink is not None:
+            cv2.putText(field_background, "pink: " + str(self.relative_angle_to_pink*180/3.1415), (10, 50), cv2.FONT_HERSHEY_COMPLEX,
+                    1, (0, 0, 0))
+        if self.relative_angle_to_blue is not None:
+            cv2.putText(field_background, "blue: " + str(self.relative_angle_to_blue*180/3.1415), (10, 100), cv2.FONT_HERSHEY_COMPLEX,
+                    1, (0, 0, 0))
+
         return field_background
 
     def showWindow(self, window_name="Basketball field"):

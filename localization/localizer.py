@@ -42,14 +42,18 @@ class Localizer:
 
     def updateMapWithMotorData(self, m1, m2, m3, m4):
         encodersum = m1+m2+m3+m4
-        encoder_rotation = encodersum * 0.1  # TODO find the correct magical constant here
+        encoder_rotation = encodersum * 0.001  # TODO find the correct magical constant here
         if self.latestMap.absolute_robot_angle is None:
-            if self.previousMap.absolute_robot_angle is not None:
+            if self.previousMap is not None and self.previousMap.absolute_robot_angle is not None:
                 self.latestMap.absolute_robot_angle = self.previousMap.absolute_robot_angle + encoder_rotation
 
-        if self.latestMap.relative_robot_angle is None:
-            if self.previousMap.relative_robot_angle is not None:
-                self.latestMap.relative_robot_angle = self.previousMap.absolute_robot_angle + encoder_rotation
+        if self.latestMap is not None and self.latestMap.relative_angle_to_blue is None:
+            if self.previousMap is not None and self.previousMap.relative_angle_to_blue is not None:
+                self.latestMap.relative_angle_to_blue = self.previousMap.relative_angle_to_blue + encoder_rotation
+
+        if self.latestMap is not None and self.latestMap.relative_angle_to_pink is None:
+            if self.previousMap is not None and self.previousMap.relative_angle_to_pink is not None:
+                self.latestMap.relative_angle_to_pink = self.previousMap.relative_angle_to_pink + encoder_rotation
 
         return self.latestMap
 
