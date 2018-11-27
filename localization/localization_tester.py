@@ -1,5 +1,4 @@
 import localizer
-import map
 import cv2
 
 
