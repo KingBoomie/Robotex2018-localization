@@ -22,6 +22,8 @@ class Localizer:
     }
 
     def __init__(self, camera_parameters_file_location):
+        self.previousMap = None
+        self.latestMap = None
         with open(camera_parameters_file_location, 'r') as stream:
             try:
                 calibration = yaml.load(stream)
@@ -35,6 +37,22 @@ class Localizer:
             except yaml.YAMLError as exc:
                 print(exc)
 
+    def getLatestMap(self):
+        return self.latestMap
+
+    def updateMapWithMotorData(self, m1, m2, m3, m4):
+        encodersum = m1+m2+m3+m4
+        encoder_rotation = encodersum * 0.1  # TODO find the correct magical constant here
+        if self.latestMap.absolute_robot_angle is None:
+            if self.previousMap.absolute_robot_angle is not None:
+                self.latestMap.absolute_robot_angle = self.previousMap.absolute_robot_angle + encoder_rotation
+
+        if self.latestMap.relative_robot_angle is None:
+            if self.previousMap.relative_robot_angle is not None:
+                self.latestMap.relative_robot_angle = self.previousMap.absolute_robot_angle + encoder_rotation
+
+        return self.latestMap
+
     def estimateLocation(self, frame, draw_axis_to_frame=False):
         # Initialize the output variables
         out_position_two_markers_1x = None
@@ -43,8 +61,10 @@ class Localizer:
         out_position_12 = None
         out_position_21 = None
         out_position_22 = None
-        angle_to_blue = None
-        angle_to_pink = None
+        absolute_angle_to_blue = None
+        absolute_angle_to_pink = None
+        relative_angle_to_blue = None
+        relative_angle_to_pink = None
 
         # Convert the frame to grayscale so that ArUco detection would work
         grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -76,6 +96,13 @@ class Localizer:
                     marker_angle_from_camera = numpy.tan(tvec[i][0][0] / tvec[i][0][2])
                     #print(marker_angle_from_camera*180/3.14159265358979323)
 
+                    if markerdata['angle'] == 0:
+                        # This is the blue basket
+                        relative_angle_to_blue = marker_angle_from_camera
+                    else:
+                        # This is the pink basket
+                        relative_angle_to_pink = marker_angle_from_camera
+
                     # Calculate the marker's attitude/orientation (rotation)
                     rotM = numpy.zeros(shape=(3, 3))
                     cv2.Rodrigues(rvec[i - 1], rotM, jacobian=0)
@@ -95,10 +122,10 @@ class Localizer:
                     angle_to_basket = markerdata['angle'] - angle # angle_between_marker_normal_and_camera
                     if markerdata['angle'] == 0:
                         # This is the blue basket
-                        angle_to_blue = angle_to_basket
+                        absolute_angle_to_blue = angle_to_basket
                     else:
                         # This is the pink basket
-                        angle_to_pink = angle_to_basket
+                        absolute_angle_to_pink = angle_to_basket
 
                     print(angle_to_basket * 180 / 3.14159265358979323)
 
@@ -178,14 +205,17 @@ class Localizer:
         out_map = map.BasketballFieldMap(None, out_position_11, out_position_12, out_position_21, out_position_22,
                                          out_position_two_markers_1x, out_position_two_markers_2x)
 
-        out_map.angle_to_pink = angle_to_pink
-        out_map.angle_to_blue = angle_to_blue
+        out_map.absolute_angle_to_pink = absolute_angle_to_pink
+        out_map.absolute_angle_to_blue = absolute_angle_to_blue
 
-        if angle_to_pink is not None or angle_to_blue is not None:
-            if angle_to_pink is not None:
-                out_map.robot_angle = angle_to_pink
+        out_map.relative_angle_to_pink = relative_angle_to_pink
+        out_map.relative_angle_to_blue = relative_angle_to_blue
+
+        if absolute_angle_to_pink is not None or absolute_angle_to_blue is not None:
+            if absolute_angle_to_pink is not None:
+                out_map.absolute_robot_angle = absolute_angle_to_pink
             else:
-                out_map.robot_angle = angle_to_blue
+                out_map.absolute_robot_angle = absolute_angle_to_blue
 
         #if out_position_two_markers_1x is not None:
         #    out_map.robot_position = out_position_two_markers_1x
@@ -201,4 +231,6 @@ class Localizer:
         else:
             out_map.robot_position = (None, None)
 
+        self.previousMap = self.latestMap
+        self.latestMap = out_map
         return out_map
