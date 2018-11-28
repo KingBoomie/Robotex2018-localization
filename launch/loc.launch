@@ -1,0 +1,5 @@
+<launch>
+  <group ns="main">
+    <node pkg="localization" type="localizer.py" name="localize" output="screen" /> 
+  </group>
+</launch>

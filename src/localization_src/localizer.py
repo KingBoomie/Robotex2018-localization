@@ -41,20 +41,62 @@ class Localizer:
         return self.latestMap
 
     def updateMapWithMotorData(self, m1, m2, m3, m4):
+        if self.latestMap == None:
+            return
+
         encodersum = m1+m2+m3+m4
-        encoder_rotation = encodersum * (3.1415926535/15400)  # TODO find the correct magical constant here
+        encoder_rotation = encodersum * (-3.1415926535*2/15400.0)
+        #print encoder_rotation
         if self.latestMap.absolute_robot_angle is None:
             if self.previousMap is not None and self.previousMap.absolute_robot_angle is not None:
                 self.latestMap.absolute_robot_angle = self.previousMap.absolute_robot_angle + encoder_rotation
 
-        if self.latestMap is not None and self.latestMap.relative_angle_to_blue is None:
-            if self.previousMap is not None and self.previousMap.relative_angle_to_blue is not None:
-                self.latestMap.relative_angle_to_blue = self.previousMap.relative_angle_to_blue + encoder_rotation
+        
+        #print(self.latestMap.relative_angle_to_blue)
+        
+        #print(self.previousMap.relative_angle_to_blue)
 
-        if self.latestMap is not None and self.latestMap.relative_angle_to_pink is None:
-            if self.previousMap is not None and self.previousMap.relative_angle_to_pink is not None:
-                self.latestMap.relative_angle_to_pink = self.previousMap.relative_angle_to_pink + encoder_rotation
+        if self.latestMap is not None:
+            # Add encoder rotation info to the estimated relative angles to the blue basket
+            if self.previousMap is not None and self.latestMap.relative_angle_to_blue is None and self.previousMap.relative_angle_to_blue is not None:
+                self.latestMap.relative_angle_to_blue = self.previousMap.relative_angle_to_blue
+            if self.latestMap.relative_angle_to_blue is not None:
+                self.latestMap.relative_angle_to_blue += encoder_rotation
+            
+            # And now wrap the output between -180 and 180 degrees (the values are in radians FYI)
+            if self.latestMap.relative_angle_to_blue is not None:
+                if self.latestMap.relative_angle_to_blue > 3.1415926535897932384:
+                    self.latestMap.relative_angle_to_blue -= 2*3.1415926535897932384
+                if self.latestMap.relative_angle_to_blue < -3.1415926535897932384:
+                    self.latestMap.relative_angle_to_blue += 2*3.1415926535897932384
+            
+            # Add encoder rotation info to the estimated relative angles to the pink basket
+            if self.previousMap is not None and self.latestMap.relative_angle_to_pink is None and self.previousMap.relative_angle_to_pink is not None:
+                self.latestMap.relative_angle_to_pink = self.previousMap.relative_angle_to_pink
+            if self.latestMap.relative_angle_to_pink is not None:
+                self.latestMap.relative_angle_to_pink += encoder_rotation
 
+            # And now wrap the output between -180 and 180 degrees (the values are in radians FYI)
+            if self.latestMap.relative_angle_to_pink is not None:
+                if self.latestMap.relative_angle_to_pink > 3.1415926535897932384:
+                    self.latestMap.relative_angle_to_pink -= 2*3.1415926535897932384
+                if self.latestMap.relative_angle_to_pink < -3.1415926535897932384:
+                    self.latestMap.relative_angle_to_pink += 2*3.1415926535897932384
+            
+        #if self.latestMap is not None:
+        #    if self.latestMap.relative_angle_to_pink is None:
+        #        print "b"
+        #        if self.previousMap is not None and self.previousMap.relative_angle_to_pink is not None:
+        #            print "pink"
+        #            self.latestMap.relative_angle_to_pink = self.previousMap.relative_angle_to_pink + encoder_rotation
+        #        else:
+        #            self.latestMap.relative_angle_to_pink += encoder_rotation
+
+        #print(self.latestMap.relative_angle_to_blue)
+        
+        #print(self.previousMap.relative_angle_to_blue)
+
+        #print
         return self.latestMap
 
     def estimateLocation(self, frame, draw_axis_to_frame=False):
@@ -131,7 +173,7 @@ class Localizer:
                         # This is the pink basket
                         absolute_angle_to_pink = angle_to_basket
 
-                    print(angle_to_basket * 180 / 3.14159265358979323)
+                    # print(angle_to_basket * 180 / 3.14159265358979323)
 
                     # Combine the markers location angle and orientation angle to get the real angle
                     angle += marker_angle_from_camera
@@ -237,4 +279,6 @@ class Localizer:
 
         self.previousMap = self.latestMap
         self.latestMap = out_map
+        
+        self.updateMapWithMotorData(0, 0, 0, 0)
         return out_map
