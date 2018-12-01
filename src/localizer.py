@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+
 from __future__ import print_function
 import rospy
 
@@ -12,8 +13,7 @@ import cv2
 
 # Messages
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import PoseWithCovarianceStamped
-import geometry_msgs
+from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion
 from serial.msg import WheelSpeed
 from localization.msg import BasketAngle
 
@@ -60,6 +60,8 @@ def camera_listener(data):
     # Send global position
     if field_map.robot_position[0] is not None and field_map.absolute_robot_angle is not None:
 
+        yaw = field_map.absolute_robot_angle
+
         pose_out = PoseWithCovarianceStamped()
 
         # Populate header
@@ -72,7 +74,7 @@ def camera_listener(data):
         pose_out.pose.pose.position.y = y
 
         # Populate orientation
-        # pose_out.pose.pose.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0, 0, yaw))
+        pose_out.pose.pose.orientation = Quaternion(*quaternion_from_euler(0, 0, yaw))
 
         # Publish it
         pose.publish(pose_out)

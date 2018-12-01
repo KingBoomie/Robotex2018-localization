@@ -28,15 +28,26 @@ void wheel_cb(const serial::WheelSpeed::ConstPtr& msg, const ros::Publisher& odo
 
     Mat euclidean_speeds = inv_coup * motor_speeds;
 
+    double x = euclidean_speeds.at<double>(0,0);
+    double y = euclidean_speeds.at<double>(0,1);
+    double phi = -euclidean_speeds.at<double>(0,2);
+
+    geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(phi);
+
+
     nav_msgs::Odometry odom;
     // header data
     odom.header.stamp = current_time;
     odom.header.frame_id = "odom";
 
+    odom.pose.pose.position.x += x;
+    odom.pose.pose.position.y += y;
+    odom.pose.pose.orientation = odom_quat;
+
     // velocity
-    odom.twist.twist.linear.x = euclidean_speeds.at<double>(0,0);
-    odom.twist.twist.linear.y = euclidean_speeds.at<double>(0,1);
-    odom.twist.twist.angular.z = -euclidean_speeds.at<double>(0,2);
+    odom.twist.twist.linear.x = x;
+    odom.twist.twist.linear.y = y;
+    odom.twist.twist.angular.z = phi;
 
     // publish the msg
     odom_pub.publish(odom);
