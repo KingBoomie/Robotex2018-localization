@@ -197,7 +197,7 @@ class Localizer:
                     numpy.sqrt(tvec[0][0][0] ** 2 + tvec[0][0][2] ** 2),
                     numpy.sqrt(tvec[1][0][0] ** 2 + tvec[1][0][2] ** 2)
                 ]
-                print(dist)
+                #print(dist)
 
                 if ids[0] == 11 or ids[0] == 12:
                     dist11 = -1

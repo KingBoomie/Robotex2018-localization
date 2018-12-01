@@ -1,5 +1,6 @@
 <launch>
   <group ns="main">
-    <node pkg="localization" type="localizer.py" name="localize" output="screen" /> 
+    <node pkg="localization" type="localizer.py" name="localize" output="screen" />
+    <node pkg="localization" type="localization" name="Odometry" />
   </group>
 </launch>

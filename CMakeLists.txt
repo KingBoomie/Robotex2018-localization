@@ -12,18 +12,32 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   serial
+  geometry_msgs
+  nav_msgs
+  tf
 )
 
-catkin_package(
-  CATKIN_DEPENDS cv_bridge genmsg message_generation roscpp rospy sensor_msgs std_msgs
-)
+find_package(Boost REQUIRED)
 
 include_directories(
-  ${catkin_INCLUDE_DIRS}
+    include/
+    ${catkin_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
 )
 
 
 add_message_files(FILES BasketAngle.msg)
 generate_messages(DEPENDENCIES std_msgs)
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS cv_bridge genmsg message_generation roscpp rospy sensor_msgs std_msgs geometry_msgs nav_msgs tf
+)
+
+add_executable(localization src/odom_broadcaster.cpp)
+add_dependencies(localization ${catkin_EXPORTED_TARGETS})
+add_dependencies(localization localization_generate_messages_cpp)
+
+target_link_libraries(
+    localization
+    ${catkin_LIBRARIES}
+)
